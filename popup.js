@@ -180,19 +180,19 @@ function renderCredentials(filter = '') {
   list.innerHTML = items.map(c => {
     const domain = extractDomain(c.url);
     const hasFavicon = !!domain;
-    return `<div class="credential-item" data-id="${escHtml(c.id)}">
+    const isSelected = selectedIds.has(c.id);
+    return `<div class="credential-item${selectMode ? ' selectable' + (isSelected ? ' selected' : '') : ''}" data-id="${escHtml(c.id)}">
+        ${selectMode ? `<input type="checkbox" class="item-checkbox" data-id="${escHtml(c.id)}"${isSelected ? ' checked' : ''} />` : ''}
         <div class="credential-favicon">
           ${hasFavicon
-            ? `<img class="favicon-img" data-domain="${escHtml(domain)}" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=28" width="18" height="18" alt="" />`
+            ? `<img class="favicon-img" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=28" width="18" height="18" alt="" />`
             : '<span>🔑</span>'}
         </div>
         <div class="credential-info">
           <div class="credential-name">${escHtml(c.name || domain || 'Unnamed')}</div>
           <div class="credential-username">${escHtml(c.username)}</div>
         </div>
-        <div class="credential-actions">
-          <button class="btn btn-sm fill-btn" data-id="${escHtml(c.id)}">Fill</button>
-        </div>
+        ${!selectMode ? `<div class="credential-actions"><button class="btn btn-sm fill-btn" data-id="${escHtml(c.id)}">Fill</button></div>` : ''}
       </div>`;
   }).join('');
 
@@ -283,6 +283,56 @@ async function deleteCredential(id) {
   renderCredentials(document.getElementById('search-input').value);
   renderMassChangeList();
   updateSiteBanner();
+}
+
+// ─── Bulk select / delete ─────────────────────────────────────────────────────
+let selectMode = false;
+let selectedIds = new Set();
+
+function enterSelectMode() {
+  selectMode = true;
+  selectedIds.clear();
+  document.getElementById('select-mode-btn').textContent = 'Cancel';
+  document.getElementById('select-mode-btn').classList.add('btn-primary');
+  document.getElementById('add-credential-btn').classList.add('hidden');
+  document.getElementById('bulk-action-bar').classList.remove('hidden');
+  renderCredentials(document.getElementById('search-input').value);
+  updateBulkCount();
+}
+
+function exitSelectMode() {
+  selectMode = false;
+  selectedIds.clear();
+  document.getElementById('select-mode-btn').textContent = 'Select';
+  document.getElementById('select-mode-btn').classList.remove('btn-primary');
+  document.getElementById('add-credential-btn').classList.remove('hidden');
+  document.getElementById('bulk-action-bar').classList.add('hidden');
+  renderCredentials(document.getElementById('search-input').value);
+}
+
+function updateBulkCount() {
+  document.getElementById('bulk-count').textContent = `${selectedIds.size} selected`;
+  document.getElementById('bulk-delete-btn').disabled = selectedIds.size === 0;
+}
+
+async function deleteSelected() {
+  if (selectedIds.size === 0) return;
+  if (!confirm(`Delete ${selectedIds.size} credential(s)? This cannot be undone.`)) return;
+  credentials = credentials.filter(c => !selectedIds.has(c.id));
+  await saveCredentials();
+  updateSiteBanner();
+  renderMassChangeList();
+  exitSelectMode();
+}
+
+async function deleteAll() {
+  if (credentials.length === 0) return;
+  if (!confirm(`Delete ALL ${credentials.length} credential(s)? This cannot be undone.`)) return;
+  credentials = [];
+  await saveCredentials();
+  updateSiteBanner();
+  renderMassChangeList();
+  exitSelectMode();
 }
 
 // ─── View credential ──────────────────────────────────────────────────────────
@@ -717,11 +767,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // Vault tab
   document.getElementById('search-input').addEventListener('input', e => renderCredentials(e.target.value));
   document.getElementById('add-credential-btn').addEventListener('click', openAddModal);
+  document.getElementById('select-mode-btn').addEventListener('click', () => selectMode ? exitSelectMode() : enterSelectMode());
+  document.getElementById('bulk-select-all-btn').addEventListener('click', () => {
+    const visible = [...document.querySelectorAll('.credential-item')].map(el => el.dataset.id);
+    const allSelected = visible.every(id => selectedIds.has(id));
+    visible.forEach(id => allSelected ? selectedIds.delete(id) : selectedIds.add(id));
+    renderCredentials(document.getElementById('search-input').value);
+    updateBulkCount();
+  });
+  document.getElementById('bulk-delete-btn').addEventListener('click', deleteSelected);
+  document.getElementById('bulk-delete-all-btn').addEventListener('click', deleteAll);
+  document.getElementById('bulk-cancel-btn').addEventListener('click', exitSelectMode);
   document.getElementById('credentials-list').addEventListener('click', e => {
     const fillBtn = e.target.closest('.fill-btn');
     const item    = e.target.closest('.credential-item');
-    if (fillBtn) { e.stopPropagation(); fillOnPage(fillBtn.dataset.id); return; }
-    if (item) openViewModal(item.dataset.id);
+    if (!item) return;
+    const id = item.dataset.id;
+
+    if (selectMode) {
+      // Clicking anywhere on the row (except the checkbox itself) toggles it too
+      if (selectedIds.has(id)) selectedIds.delete(id);
+      else selectedIds.add(id);
+      // Keep checkbox in sync
+      const cb = item.querySelector('.item-checkbox');
+      if (cb) cb.checked = selectedIds.has(id);
+      item.classList.toggle('selected', selectedIds.has(id));
+      updateBulkCount();
+      return;
+    }
+
+    if (fillBtn) { e.stopPropagation(); fillOnPage(id); return; }
+    openViewModal(id);
   });
 
   // Credential modal

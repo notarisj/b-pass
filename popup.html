@@ -74,6 +74,7 @@
     <div class="toolbar">
       <input type="text" id="search-input" placeholder="Search credentials..." class="search-input" />
       <button id="add-credential-btn" class="btn btn-primary btn-sm">+ Add</button>
+      <button id="select-mode-btn" class="btn btn-sm">Select</button>
     </div>
 
     <div id="current-site-banner" class="site-banner hidden">
@@ -83,6 +84,16 @@
 
     <div id="credentials-list" class="credentials-list">
       <div class="empty-state">No credentials yet. Click + Add to create one.</div>
+    </div>
+
+    <div id="bulk-action-bar" class="bulk-action-bar hidden">
+      <span id="bulk-count" class="bulk-count">0 selected</span>
+      <div class="bulk-btns">
+        <button id="bulk-select-all-btn" class="btn btn-sm">All</button>
+        <button id="bulk-delete-btn" class="btn btn-sm btn-danger">Delete Selected</button>
+        <button id="bulk-delete-all-btn" class="btn btn-sm btn-danger">Delete All</button>
+        <button id="bulk-cancel-btn" class="btn btn-sm">Cancel</button>
+      </div>
     </div>
   </div>
 

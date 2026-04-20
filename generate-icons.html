@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate Icons</title></head>
+<body>
+<p>Click the button below to download the 3 icon files, then place them in the <code>icons/</code> folder.</p>
+<button onclick="generateAll()">Generate & Download Icons</button>
+<script>
+function makeIcon(size) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const r = size * 0.48;
+  const cx = size / 2, cy = size / 2;
+
+  // Background circle
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+
+  // Outer ring
+  ctx.strokeStyle = '#5c6bc0';
+  ctx.lineWidth = size * 0.06;
+  ctx.beginPath(); ctx.arc(cx, cy, r - size * 0.04, 0, Math.PI * 2); ctx.stroke();
+
+  // Lock body
+  const lw = size * 0.38, lh = size * 0.28;
+  const lx = cx - lw / 2, ly = cy - lh * 0.1;
+  ctx.fillStyle = '#5c6bc0';
+  const rr = size * 0.05;
+  ctx.beginPath();
+  ctx.moveTo(lx + rr, ly); ctx.lineTo(lx + lw - rr, ly);
+  ctx.arcTo(lx + lw, ly, lx + lw, ly + rr, rr);
+  ctx.lineTo(lx + lw, ly + lh - rr);
+  ctx.arcTo(lx + lw, ly + lh, lx + lw - rr, ly + lh, rr);
+  ctx.lineTo(lx + rr, ly + lh);
+  ctx.arcTo(lx, ly + lh, lx, ly + lh - rr, rr);
+  ctx.lineTo(lx, ly + rr);
+  ctx.arcTo(lx, ly, lx + rr, ly, rr);
+  ctx.closePath(); ctx.fill();
+
+  // Shackle
+  ctx.strokeStyle = '#5c6bc0';
+  ctx.lineWidth = size * 0.07;
+  ctx.lineCap = 'round';
+  const sw = lw * 0.55, sh = size * 0.22;
+  const sx = cx - sw / 2, sy = ly - sh;
+  ctx.beginPath();
+  ctx.moveTo(sx, ly - size * 0.01);
+  ctx.lineTo(sx, sy + sw * 0.5);
+  ctx.arcTo(sx, sy, sx + sw * 0.5, sy, sw * 0.5);
+  ctx.arcTo(sx + sw, sy, sx + sw, sy + sw * 0.5, sw * 0.5);
+  ctx.lineTo(sx + sw, ly - size * 0.01);
+  ctx.stroke();
+
+  // Keyhole
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath();
+  ctx.arc(cx, ly + lh * 0.4, size * 0.05, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(cx - size * 0.03, ly + lh * 0.4, size * 0.06, size * 0.1);
+
+  return canvas.toDataURL('image/png');
+}
+
+function downloadDataUrl(dataUrl, filename) {
+  const a = document.createElement('a');
+  a.href = dataUrl; a.download = filename; a.click();
+}
+
+function generateAll() {
+  [16, 48, 128].forEach(size => {
+    setTimeout(() => downloadDataUrl(makeIcon(size), `icon${size}.png`), size);
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B-Pass</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="screen-setup" class="screen hidden">
+  <div class="brand">
+    <div class="brand-icon">🔐</div>
+    <h1>B-Pass</h1>
+    <p class="subtitle">Create your master password to get started</p>
+  </div>
+  <div class="form-group">
+    <label>Master Password</label>
+    <div class="input-wrap">
+      <input type="password" id="setup-password" placeholder="Create master password" />
+      <button class="eye-btn" data-target="setup-password">👁</button>
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Confirm Password</label>
+    <div class="input-wrap">
+      <input type="password" id="setup-confirm" placeholder="Confirm master password" />
+      <button class="eye-btn" data-target="setup-confirm">👁</button>
+    </div>
+  </div>
+  <div class="password-strength" id="setup-strength"></div>
+  <button id="setup-btn" class="btn btn-primary btn-full">Create Vault</button>
+  <p id="setup-error" class="error-msg hidden"></p>
+</div>
+
+<!-- UNLOCK SCREEN -->
+<div id="screen-unlock" class="screen screen-unlock hidden">
+  <div class="brand">
+    <div class="brand-icon">🔒</div>
+    <h1>B-Pass</h1>
+    <p class="subtitle">Enter your master password</p>
+  </div>
+  <div class="form-group">
+    <label>Master Password</label>
+    <div class="input-wrap">
+      <input type="password" id="unlock-password" placeholder="Master password" />
+      <button class="eye-btn" data-target="unlock-password">👁</button>
+    </div>
+  </div>
+  <button id="unlock-btn" class="btn btn-primary btn-full">Unlock</button>
+  <p id="unlock-error" class="error-msg hidden"></p>
+</div>
+
+<!-- MAIN APP -->
+<div id="screen-main" class="screen hidden">
+  <header class="app-header">
+    <div class="header-left">
+      <span class="app-logo">🔐 B-Pass</span>
+    </div>
+    <div class="header-right">
+      <button id="lock-btn" class="icon-btn" title="Lock vault">🔒</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="vault">Vault</button>
+    <button class="tab" data-tab="mass-change">Mass Change</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </nav>
+
+  <!-- VAULT TAB -->
+  <div id="tab-vault" class="tab-content active">
+    <div class="toolbar">
+      <input type="text" id="search-input" placeholder="Search credentials..." class="search-input" />
+      <button id="add-credential-btn" class="btn btn-primary btn-sm">+ Add</button>
+    </div>
+
+    <div id="current-site-banner" class="site-banner hidden">
+      <span class="site-banner-label" id="current-site-text"></span>
+      <div id="site-badge-list" class="site-badge-list"></div>
+    </div>
+
+    <div id="credentials-list" class="credentials-list">
+      <div class="empty-state">No credentials yet. Click + Add to create one.</div>
+    </div>
+  </div>
+
+  <!-- MASS CHANGE TAB -->
+  <div id="tab-mass-change" class="tab-content">
+    <div class="section-header">
+      <h3>Mass Password Change</h3>
+      <p class="section-desc">Update passwords for multiple accounts on a site simultaneously.</p>
+    </div>
+
+    <div class="form-group">
+      <label>Change Password URL</label>
+      <input type="text" id="mass-change-url" placeholder="https://example.com/change-password" />
+    </div>
+
+    <div class="form-group">
+      <label>Select Accounts</label>
+      <div class="site-filter">
+        <input type="text" id="mass-filter" placeholder="Filter by site..." />
+        <button id="mass-select-all" class="btn btn-sm">Select All</button>
+        <button id="mass-deselect-all" class="btn btn-sm">Deselect All</button>
+      </div>
+      <div id="mass-credentials-list" class="mass-list"></div>
+    </div>
+
+    <div class="form-group">
+      <label>New Password Strategy</label>
+      <div class="radio-group">
+        <label><input type="radio" name="pw-strategy" value="generate" checked /> Auto-generate for each</label>
+        <label><input type="radio" name="pw-strategy" value="same" /> Same new password for all</label>
+      </div>
+    </div>
+
+    <div id="same-pw-group" class="form-group hidden">
+      <label>New Password</label>
+      <div class="input-wrap">
+        <input type="password" id="mass-new-password" placeholder="New password for all selected" />
+        <button class="eye-btn" data-target="mass-new-password">👁</button>
+        <button id="mass-generate-btn" class="btn btn-sm" title="Generate">⟳</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Password Length (for auto-generate)</label>
+      <div class="range-wrap">
+        <input type="range" id="mass-pw-length" min="8" max="64" value="16" />
+        <span id="mass-pw-length-val">16</span>
+      </div>
+    </div>
+
+    <button id="mass-change-btn" class="btn btn-primary btn-full">Start Mass Change</button>
+    <div id="mass-change-progress" class="progress-area hidden"></div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div id="tab-settings" class="tab-content">
+    <div class="settings-group">
+      <h4>Security</h4>
+      <div class="form-group">
+        <label>Auto-lock After</label>
+        <select id="auto-lock-select">
+          <option value="0">Never</option>
+          <option value="5">5 minutes</option>
+          <option value="15" selected>15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">1 hour</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="autofill-enabled" checked />
+          Auto-fill detected login forms
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="autosubmit-enabled" />
+          Auto-submit form after filling
+        </label>
+        <p class="setting-hint">Automatically clicks the login button after credentials are filled.</p>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>Change Master Password</h4>
+      <div class="form-group">
+        <div class="input-wrap">
+          <input type="password" id="change-current-pw" placeholder="Current master password" />
+          <button class="eye-btn" data-target="change-current-pw">👁</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="input-wrap">
+          <input type="password" id="change-new-pw" placeholder="New master password" />
+          <button class="eye-btn" data-target="change-new-pw">👁</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="input-wrap">
+          <input type="password" id="change-confirm-pw" placeholder="Confirm new password" />
+          <button class="eye-btn" data-target="change-confirm-pw">👁</button>
+        </div>
+      </div>
+      <button id="change-pw-btn" class="btn btn-primary">Update Master Password</button>
+      <p id="change-pw-msg" class="msg hidden"></p>
+    </div>
+
+    <div class="settings-group">
+      <h4>Data</h4>
+      <div class="data-actions">
+        <div class="data-row">
+          <div>
+            <div class="data-label">Export Vault</div>
+            <div class="data-desc">Download all credentials as an encrypted JSON backup</div>
+          </div>
+          <button id="export-btn" class="btn btn-sm">Export JSON</button>
+        </div>
+        <div class="data-row">
+          <div>
+            <div class="data-label">Import from File</div>
+            <div class="data-desc">Supports B-Pass JSON, CSV (name,url,username,password), or Bitwarden/KeePass CSV exports</div>
+          </div>
+          <div class="import-btns">
+            <button id="import-json-btn" class="btn btn-sm">JSON</button>
+            <button id="import-csv-btn" class="btn btn-sm">CSV</button>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="import-file-json" accept=".json" class="hidden" />
+      <input type="file" id="import-file-csv" accept=".csv,.txt" class="hidden" />
+      <div id="import-preview" class="import-preview hidden">
+        <div class="import-preview-header">
+          <span id="import-preview-count"></span>
+          <div class="import-preview-actions">
+            <button id="import-confirm-btn" class="btn btn-sm btn-primary">Import All</button>
+            <button id="import-cancel-btn" class="btn btn-sm">Cancel</button>
+          </div>
+        </div>
+        <div id="import-preview-list" class="import-preview-list"></div>
+      </div>
+      <p id="import-msg" class="msg hidden"></p>
+    </div>
+  </div>
+</div>
+
+<!-- CREDENTIAL MODAL -->
+<div id="modal-credential" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modal-title">Add Credential</h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Name / Site</label>
+      <input type="text" id="cred-name" placeholder="e.g. GitHub" />
+    </div>
+    <div class="form-group">
+      <label>URL</label>
+      <input type="text" id="cred-url" placeholder="https://github.com" />
+    </div>
+    <div class="form-group">
+      <label>Username / Email</label>
+      <input type="text" id="cred-username" placeholder="your@email.com" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <div class="input-wrap">
+        <input type="password" id="cred-password" placeholder="Password" autocomplete="off" />
+        <button class="eye-btn" data-target="cred-password">👁</button>
+        <button id="gen-password-btn" class="btn btn-sm" title="Generate password">⟳</button>
+      </div>
+      <div class="gen-options hidden" id="gen-options">
+        <label>Length: <input type="number" id="gen-length" value="16" min="8" max="64" /></label>
+        <label><input type="checkbox" id="gen-upper" checked /> A-Z</label>
+        <label><input type="checkbox" id="gen-lower" checked /> a-z</label>
+        <label><input type="checkbox" id="gen-numbers" checked /> 0-9</label>
+        <label><input type="checkbox" id="gen-symbols" checked /> !@#</label>
+        <button id="gen-apply-btn" class="btn btn-sm btn-primary">Apply</button>
+      </div>
+    </div>
+    <p id="modal-error" class="error-msg hidden"></p>
+    <div class="modal-footer">
+      <button id="modal-save-btn" class="btn btn-primary">Save</button>
+      <button id="modal-cancel-btn" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW PASSWORD MODAL -->
+<div id="modal-view" class="modal hidden">
+  <div class="modal-content modal-sm">
+    <div class="modal-header">
+      <h3 id="view-title">View Credential</h3>
+      <button class="modal-close" id="view-close">✕</button>
+    </div>
+    <div class="view-row">
+      <span class="view-label">Username</span>
+      <div class="view-value-wrap">
+        <span id="view-username" class="view-value"></span>
+        <button class="copy-btn" data-copy="username">Copy</button>
+      </div>
+    </div>
+    <div class="view-row">
+      <span class="view-label">Password</span>
+      <div class="view-value-wrap">
+        <span id="view-password" class="view-value monospace masked">••••••••</span>
+        <button class="eye-btn-inline" id="view-pw-toggle">Show</button>
+        <button class="copy-btn" data-copy="password">Copy</button>
+      </div>
+    </div>
+    <div class="view-row">
+      <span class="view-label">URL</span>
+      <span id="view-url" class="view-value url-value"></span>
+    </div>
+    <div class="modal-footer">
+      <button id="view-fill-btn" class="btn btn-success">Fill on Page</button>
+      <button id="view-edit-btn" class="btn btn-primary">Edit</button>
+      <button id="view-delete-btn" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="crypto.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

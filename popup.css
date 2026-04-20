@@ -18,6 +18,7 @@ body {
 /* Screens */
 .screen { display: flex; flex-direction: column; flex: 1; overflow-y: auto; }
 .screen-unlock {padding: 24px 20px;}
+.screen-setup { padding: 30px 20px; }
 
 /* Brand */
 .brand { text-align: center; margin-bottom: 24px; }

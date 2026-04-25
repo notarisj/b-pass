@@ -26,7 +26,12 @@ async function loadCredentials() {
   if (!enc) { credentials = []; return; }
   try {
     const json = await decryptData(enc, masterPassword);
-    credentials = JSON.parse(json);
+    const loaded = JSON.parse(json);
+    credentials = loaded.map(c => {
+      if (c.urls) return c;
+      const { url, ...rest } = c;
+      return { ...rest, urls: url ? [url] : [] };
+    });
   } catch {
     credentials = [];
     // Decryption failed — vault may be corrupted or wrong key was used
@@ -169,7 +174,7 @@ function matchesUrl(credUrl, pageUrl) {
 }
 
 function getMatchingCredentials(url) {
-  return credentials.filter(c => matchesUrl(c.url, url));
+  return credentials.filter(c => (c.urls || []).some(u => matchesUrl(u, url)));
 }
 
 // ─── Site banner ──────────────────────────────────────────────────────────────
@@ -203,7 +208,7 @@ function renderCredentials(filter = '') {
     items = items.filter(c =>
       (c.name || '').toLowerCase().includes(q) ||
       (c.username || '').toLowerCase().includes(q) ||
-      (c.url || '').toLowerCase().includes(q)
+      (c.urls || []).some(u => u.toLowerCase().includes(q))
     );
   }
 
@@ -214,7 +219,7 @@ function renderCredentials(filter = '') {
 
   // Build HTML without inline event handlers (onerror replaced with JS below)
   list.innerHTML = items.map(c => {
-    const domain = extractDomain(c.url);
+    const domain = extractDomain((c.urls || [])[0] || '');
     const hasFavicon = !!domain;
     const isSelected = selectedIds.has(c.id);
     return `<div class="credential-item${selectMode ? ' selectable' + (isSelected ? ' selected' : '') : ''}" data-id="${escHtml(c.id)}">
@@ -245,12 +250,46 @@ function renderCredentials(filter = '') {
   });
 }
 
+// ─── URL list management ──────────────────────────────────────────────────────
+function renderUrlList(urls) {
+  const list = document.getElementById('cred-urls-list');
+  list.innerHTML = '';
+  (urls.length ? urls : ['']).forEach(u => addUrlRow(u));
+}
+
+function addUrlRow(value = '') {
+  const list = document.getElementById('cred-urls-list');
+  const row = document.createElement('div');
+  row.className = 'url-row';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'url-input';
+  input.value = value;
+  input.placeholder = 'https://example.com';
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn btn-sm remove-url-btn';
+  removeBtn.textContent = '✕';
+  removeBtn.addEventListener('click', () => {
+    if (list.children.length > 1) row.remove();
+  });
+  row.appendChild(input);
+  row.appendChild(removeBtn);
+  list.appendChild(row);
+}
+
+function getUrlsFromModal() {
+  return [...document.querySelectorAll('#cred-urls-list .url-input')]
+    .map(i => i.value.trim())
+    .filter(Boolean);
+}
+
 // ─── Credential modal ─────────────────────────────────────────────────────────
 function openAddModal() {
   editingId = null;
   document.getElementById('modal-title').textContent = 'Add Credential';
   document.getElementById('cred-name').value = '';
-  document.getElementById('cred-url').value = currentTabUrl;
+  renderUrlList(currentTabUrl ? [currentTabUrl] : ['']);
   document.getElementById('cred-username').value = '';
   document.getElementById('cred-password').value = '';
   document.getElementById('cred-password').type = 'password';
@@ -266,7 +305,7 @@ function openEditModal(id) {
   editingId = id;
   document.getElementById('modal-title').textContent = 'Edit Credential';
   document.getElementById('cred-name').value = cred.name;
-  document.getElementById('cred-url').value = cred.url;
+  renderUrlList(cred.urls && cred.urls.length ? cred.urls : ['']);
   document.getElementById('cred-username').value = cred.username;
   document.getElementById('cred-password').value = cred.password;
   document.getElementById('cred-password').type = 'password';
@@ -282,22 +321,24 @@ function closeModal() {
 
 async function saveCredential() {
   const name = document.getElementById('cred-name').value.trim();
-  const url = document.getElementById('cred-url').value.trim();
+  const urls = getUrlsFromModal();
   const username = document.getElementById('cred-username').value.trim();
   const password = document.getElementById('cred-password').value;
 
-  if (!url || !username || !password) {
-    showModalError('URL, username and password are required.');
+  if (!urls.length || !username || !password) {
+    showModalError('At least one URL, username and password are required.');
     return;
   }
+
+  const primaryDomain = extractDomain(urls[0]);
 
   if (editingId) {
     const idx = credentials.findIndex(c => c.id === editingId);
     if (idx >= 0) {
-      credentials[idx] = { ...credentials[idx], name: name || extractDomain(url), url, username, password, lastModified: Date.now() };
+      credentials[idx] = { ...credentials[idx], name: name || primaryDomain, urls, username, password, lastModified: Date.now() };
     }
   } else {
-    credentials.push({ id: generateId(), name: name || extractDomain(url), url, username, password, lastModified: Date.now() });
+    credentials.push({ id: generateId(), name: name || primaryDomain, urls, username, password, lastModified: Date.now() });
   }
 
   await saveCredentials();
@@ -375,14 +416,15 @@ async function deleteAll() {
 function openViewModal(id) {
   viewingCredential = credentials.find(c => c.id === id);
   if (!viewingCredential) return;
-  document.getElementById('view-title').textContent = viewingCredential.name || extractDomain(viewingCredential.url);
+  document.getElementById('view-title').textContent = viewingCredential.name || extractDomain((viewingCredential.urls || [])[0] || '');
   document.getElementById('view-username').textContent = viewingCredential.username;
   const pwEl = document.getElementById('view-password');
   pwEl.textContent = '••••••••';
   pwEl.dataset.real = viewingCredential.password;
   pwEl.dataset.shown = '0';
   document.getElementById('view-pw-toggle').textContent = 'Show';
-  document.getElementById('view-url').textContent = viewingCredential.url;
+  const viewUrlsEl = document.getElementById('view-urls');
+  viewUrlsEl.innerHTML = (viewingCredential.urls || []).map(u => `<div class="url-item">${escHtml(u)}</div>`).join('') || '—';
   document.getElementById('modal-view').classList.remove('hidden');
 }
 
@@ -428,7 +470,7 @@ function renderMassChangeList(filter = '') {
     const q = filter.toLowerCase();
     items = items.filter(c =>
       (c.name || '').toLowerCase().includes(q) ||
-      (c.url || '').toLowerCase().includes(q) ||
+      (c.urls || []).some(u => u.toLowerCase().includes(q)) ||
       (c.username || '').toLowerCase().includes(q)
     );
   }
@@ -442,8 +484,8 @@ function renderMassChangeList(filter = '') {
     <div class="mass-item" data-id="${escHtml(c.id)}">
       <input type="checkbox" class="mass-check" data-id="${escHtml(c.id)}" />
       <div class="mass-item-info">
-        <div class="mass-item-name">${escHtml(c.name || extractDomain(c.url))}</div>
-        <div class="mass-item-user">${escHtml(c.username)} · ${escHtml(extractDomain(c.url))}</div>
+        <div class="mass-item-name">${escHtml(c.name || extractDomain((c.urls || [])[0] || ''))}</div>
+        <div class="mass-item-user">${escHtml(c.username)} · ${escHtml(extractDomain((c.urls || [])[0] || ''))}</div>
       </div>
     </div>`).join('');
 }
@@ -476,7 +518,7 @@ async function startMassChange() {
     const newPw = strategy === 'same' ? sameNewPw : generatePassword(pwLength);
     const item = document.createElement('div');
     item.className = 'progress-item pending';
-    item.textContent = `⏳ ${cred.name || extractDomain(cred.url)} (${cred.username})`;
+    item.textContent = `⏳ ${cred.name || extractDomain((cred.urls || [])[0] || '')} (${cred.username})`;
     progressArea.appendChild(item);
 
     if (changeUrl) {
@@ -508,14 +550,14 @@ async function startMassChange() {
                   });
                   if (res?.success) {
                     item.className = 'progress-item success';
-                    item.textContent = `✓ ${cred.name || extractDomain(cred.url)} (${cred.username}) — filled, awaiting submit`;
+                    item.textContent = `✓ ${cred.name || extractDomain((cred.urls || [])[0] || '')} (${cred.username}) — filled, awaiting submit`;
                   } else {
                     item.className = 'progress-item error';
-                    item.textContent = `✗ ${cred.name || extractDomain(cred.url)}: ${res?.error || 'Could not fill form'}`;
+                    item.textContent = `✗ ${cred.name || extractDomain((cred.urls || [])[0] || '')}: ${res?.error || 'Could not fill form'}`;
                   }
                 } catch (e) {
                   item.className = 'progress-item error';
-                  item.textContent = `✗ ${cred.name || extractDomain(cred.url)}: ${e.message}`;
+                  item.textContent = `✗ ${cred.name || extractDomain((cred.urls || [])[0] || '')}: ${e.message}`;
                 }
                 resolve();
               }, 800);
@@ -525,11 +567,11 @@ async function startMassChange() {
         });
       } catch (e) {
         item.className = 'progress-item error';
-        item.textContent = `✗ ${cred.name || extractDomain(cred.url)}: ${e.message}`;
+        item.textContent = `✗ ${cred.name || extractDomain((cred.urls || [])[0] || '')}: ${e.message}`;
       }
     } else {
       item.className = 'progress-item success';
-      item.textContent = `✓ ${cred.name || extractDomain(cred.url)} (${cred.username}) — vault updated`;
+      item.textContent = `✓ ${cred.name || extractDomain((cred.urls || [])[0] || '')} (${cred.username}) — vault updated`;
     }
 
     // Update stored password
@@ -626,10 +668,11 @@ function parseJSON(text) {
 
 function normalizeCredential(raw) {
   const url = raw.url || raw.login?.uris?.[0]?.uri || raw.URL || raw.uri || '';
+  const urls = raw.urls ? raw.urls.map(String) : (url ? [String(url)] : []);
   const username = raw.username || raw.login?.username || raw.Username || raw.UserName || '';
   const password = raw.password || raw.login?.password || raw.Password || '';
   const name = raw.name || raw.Name || raw.title || raw.Title || extractDomain(url) || 'Imported';
-  return { id: generateId(), name: String(name), url: String(url), username: String(username), password: String(password), lastModified: Date.now() };
+  return { id: generateId(), name: String(name), urls, username: String(username), password: String(password), lastModified: Date.now() };
 }
 
 function parseCSV(text) {
@@ -654,7 +697,7 @@ function parseCSV(text) {
     const password = iPass >= 0 ? (cols[iPass] || '').trim() : '';
     const name     = iName >= 0 ? (cols[iName] || '').trim() : extractDomain(url) || 'Imported';
     if (!username && !password) return null;
-    return { id: generateId(), name: name || extractDomain(url) || 'Imported', url, username, password, lastModified: Date.now() };
+    return { id: generateId(), name: name || extractDomain(url) || 'Imported', urls: url ? [url] : [], username, password, lastModified: Date.now() };
   }).filter(Boolean);
 }
 
@@ -677,14 +720,14 @@ function renderImportPreview() {
   const preview  = document.getElementById('import-preview');
   const countEl  = document.getElementById('import-preview-count');
   const listEl   = document.getElementById('import-preview-list');
-  const existing = new Set(credentials.map(c => `${c.url}|${c.username}`));
+  const existing = new Set(credentials.flatMap(c => (c.urls || []).map(u => `${u}|${c.username}`)));
 
   countEl.textContent = `${pendingImport.length} credential(s) found`;
   listEl.innerHTML = pendingImport.map(c => {
-    const isDup = existing.has(`${c.url}|${c.username}`);
+    const isDup = (c.urls || []).some(u => existing.has(`${u}|${c.username}`));
     return `<div class="import-preview-item${isDup ? ' duplicate' : ''}">
       <span class="ip-name">${escHtml(c.name)}</span>
-      <span class="ip-user">${escHtml(c.username)} · ${escHtml(c.url || '—')}</span>
+      <span class="ip-user">${escHtml(c.username)} · ${escHtml((c.urls || [])[0] || '—')}</span>
     </div>`;
   }).join('');
 
@@ -695,7 +738,7 @@ function renderImportPreview() {
 async function confirmImport() {
   let added = 0;
   pendingImport.forEach(c => {
-    if (!credentials.find(e => e.url === c.url && e.username === c.username)) {
+    if (!credentials.find(e => e.username === c.username && (e.urls || []).some(eu => (c.urls || []).includes(eu)))) {
       credentials.push(c); added++;
     }
   });
@@ -841,6 +884,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
   document.getElementById('modal-save-btn').addEventListener('click', saveCredential);
+  document.getElementById('add-url-btn').addEventListener('click', () => addUrlRow());
   document.getElementById('modal-credential').addEventListener('click', e => {
     if (e.target === document.getElementById('modal-credential')) closeModal();
   });

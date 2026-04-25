@@ -350,6 +350,15 @@ body {
 .toast-success { background: #388e3c; }
 .toast-error   { background: #c62828; }
 
+/* URL list in credential modal */
+.url-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+.url-row .url-input { flex: 1; padding: 8px 10px; background: #16213e; border: 1px solid #2a2a4a; border-radius: 6px; color: #e0e0e0; font-size: 13px; outline: none; transition: border-color 0.2s; }
+.url-row .url-input:focus { border-color: #5c6bc0; }
+.remove-url-btn { flex-shrink: 0; }
+#add-url-btn { margin-top: 4px; }
+.url-item { color: #5c6bc0; font-size: 11px; word-break: break-all; margin-bottom: 2px; }
+.url-item:last-child { margin-bottom: 0; }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

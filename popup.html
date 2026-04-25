@@ -251,8 +251,9 @@
       <input type="text" id="cred-name" placeholder="e.g. GitHub" />
     </div>
     <div class="form-group">
-      <label>URL</label>
-      <input type="text" id="cred-url" placeholder="https://github.com" />
+      <label>URLs</label>
+      <div id="cred-urls-list"></div>
+      <button type="button" id="add-url-btn" class="btn btn-sm">+ Add URL</button>
     </div>
     <div class="form-group">
       <label>Username / Email</label>
@@ -305,8 +306,8 @@
       </div>
     </div>
     <div class="view-row">
-      <span class="view-label">URL</span>
-      <span id="view-url" class="view-value url-value"></span>
+      <span class="view-label">URLs</span>
+      <div id="view-urls" class="view-value url-value"></div>
     </div>
     <div class="modal-footer">
       <button id="view-fill-btn" class="btn btn-success">Fill on Page</button>

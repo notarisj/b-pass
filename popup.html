@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>B-Pass</title>
+  <title data-brand-name>B-Pass</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
@@ -11,8 +11,8 @@
 <!-- SETUP SCREEN -->
 <div id="screen-setup" class="screen screen-setup hidden">
   <div class="brand">
-    <div class="brand-icon">🔐</div>
-    <h1>B-Pass</h1>
+    <div class="brand-icon" data-brand-icon>🔐</div>
+    <h1 data-brand-name>B-Pass</h1>
     <p class="subtitle">Create your master password to get started</p>
   </div>
   <div class="form-group">
@@ -38,7 +38,7 @@
 <div id="screen-unlock" class="screen screen-unlock hidden">
   <div class="brand">
     <div class="brand-icon">🔒</div>
-    <h1>B-Pass</h1>
+    <h1 data-brand-name>B-Pass</h1>
     <p class="subtitle">Enter your master password</p>
   </div>
   <div class="form-group">
@@ -56,7 +56,7 @@
 <div id="screen-main" class="screen hidden">
   <header class="app-header">
     <div class="header-left">
-      <span class="app-logo">🔐 B-Pass</span>
+      <span class="app-logo" data-brand-logo>🔐 B-Pass</span>
     </div>
     <div class="header-right">
       <button id="lock-btn" class="icon-btn" title="Lock vault">🔒</button>
@@ -214,7 +214,7 @@
         <div class="data-row">
           <div>
             <div class="data-label">Import from File</div>
-            <div class="data-desc">Supports B-Pass JSON, CSV (name,url,username,password), or Bitwarden/KeePass CSV exports</div>
+            <div class="data-desc" data-brand-import-desc>Supports B-Pass JSON, CSV (name,url,username,password), or Bitwarden/KeePass CSV exports</div>
           </div>
           <div class="import-btns">
             <button id="import-json-btn" class="btn btn-sm">JSON</button>
@@ -316,6 +316,7 @@
   </div>
 </div>
 
+<script src="branding.js"></script>
 <script src="crypto.js"></script>
 <script src="popup.js"></script>
 </body>

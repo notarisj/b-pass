@@ -1,4 +1,4 @@
-/* global encryptData, decryptData, hashMasterPassword, timingSafeEqual, generatePassword, generateId */
+/* global encryptData, decryptData, hashMasterPassword, timingSafeEqual, generatePassword, generateId, APP_BRANDING */
 // ─── State ───────────────────────────────────────────────────────────────────
 let masterPassword = null;
 let credentials = [];
@@ -50,8 +50,21 @@ async function verifyMasterPassword(password) {
   return timingSafeEqual(hash, masterHash);
 }
 
+// ─── Branding ────────────────────────────────────────────────────────────────
+function applyBranding() {
+  // @ts-ignore – APP_BRANDING is a global defined in branding.js, loaded before this script
+  const { name, icon } = APP_BRANDING;
+  document.querySelectorAll('[data-brand-name]').forEach(el => { el.textContent = name; });
+  document.querySelectorAll('[data-brand-icon]').forEach(el => { el.textContent = icon; });
+  document.querySelectorAll('[data-brand-logo]').forEach(el => { el.textContent = `${icon} ${name}`; });
+  document.querySelectorAll('[data-brand-import-desc]').forEach(el => {
+    el.textContent = `Supports ${name} JSON, CSV (name,url,username,password), or Bitwarden/KeePass CSV exports`;
+  });
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
+  applyBranding();
   const { vaultSetup, settings } = await getStorage(['vaultSetup', 'settings']);
 
   const { key } = await chrome.runtime.sendMessage({ action: 'GET_SESSION_KEY' });
@@ -584,7 +597,8 @@ function exportVault() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `b-pass-export-${new Date().toISOString().slice(0,10)}.json`;
+  // @ts-ignore – APP_BRANDING is a global defined in branding.js
+  a.download = `${APP_BRANDING.exportPrefix}-export-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }

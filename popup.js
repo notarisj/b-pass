@@ -124,12 +124,35 @@ function extractDomain(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
 
+// Returns "hostname:port" for display — port omitted when it is the protocol default.
+function extractSiteLabel(url) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, '');
+    return u.port ? `${host}:${u.port}` : host;
+  } catch { return ''; }
+}
+
 function matchesUrl(credUrl, pageUrl) {
   if (!credUrl || !pageUrl) return false;
-  const credDomain = extractDomain(credUrl);
-  const pageDomain = extractDomain(pageUrl);
-  if (!credDomain || !pageDomain) return false;
-  return pageDomain === credDomain || pageDomain.endsWith('.' + credDomain) || credDomain.endsWith('.' + pageDomain);
+  try {
+    const cred = new URL(credUrl);
+    const page = new URL(pageUrl);
+
+    // Hostname must match (ignore www.)
+    if (cred.hostname.replace(/^www\./, '') !== page.hostname.replace(/^www\./, '')) return false;
+
+    // Different port = different site (normalize missing port to protocol default)
+    const resolvedPort = (u) => u.port || (u.protocol === 'https:' ? '443' : '80');
+    if (resolvedPort(cred) !== resolvedPort(page)) return false;
+
+    // The page path must fall within the credential URL's directory.
+    // e.g. credential stored at /Wholesale/login.jsp → credDir is /Wholesale/
+    const credDir = cred.pathname.endsWith('/')
+      ? cred.pathname
+      : cred.pathname.slice(0, cred.pathname.lastIndexOf('/') + 1) || '/';
+    return page.pathname.startsWith(credDir);
+  } catch { return false; }
 }
 
 function getMatchingCredentials(url) {
@@ -146,7 +169,7 @@ function updateSiteBanner() {
   if (matching.length === 0) { banner.classList.add('hidden'); return; }
 
   banner.classList.remove('hidden');
-  text.textContent = extractDomain(currentTabUrl);
+  text.textContent = extractSiteLabel(currentTabUrl);
 
   // Build badges without inline event handlers (CSP safe)
   badgeList.innerHTML = matching.map(c =>

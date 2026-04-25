@@ -129,7 +129,7 @@ body {
 /* Site banner */
 .site-banner {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   flex-wrap: wrap;
   padding: 7px 10px;
@@ -137,6 +137,9 @@ body {
   border: 1px solid #2a4a2a;
   border-radius: 6px;
   margin-bottom: 10px;
+  max-height: 130px;
+  overflow-y: auto;
+  flex-shrink: 0;
 }
 .site-banner-label {
   font-size: 10px;

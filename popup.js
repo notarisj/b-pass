@@ -434,7 +434,7 @@ function renderMassChangeList(filter = '') {
   }
 
   if (items.length === 0) {
-    list.innerHTML = '<div class="empty-state" style="padding:12px">No credentials found.</div>';
+    list.innerHTML = '<div class="empty-state">No credentials found.</div>';
     return;
   }
 

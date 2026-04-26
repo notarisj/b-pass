@@ -1,8 +1,6 @@
 // Field detection heuristics
 const USERNAME_SIGNALS = ['user', 'login', 'email', 'uname', 'userid', 'account', 'username', 'identifier', 'id', 'loginid'];
 const PASSWORD_SIGNALS = ['pass', 'pwd', 'password', 'secret', 'credentials'];
-const NEW_PASS_SIGNALS = ['new', 'newpass', 'newpwd', 'newpassword', 'confirm', 'retype', 'repeat'];
-const OLD_PASS_SIGNALS = ['old', 'current', 'existing', 'oldpass', 'currentpass'];
 
 function scoreField(el, signals) {
   let score = 0;
@@ -52,34 +50,6 @@ function findLoginForm() {
   forms.forEach(tryForm);
   if (!best) tryForm(document.body);
   return best;
-}
-
-function findChangePasswordForm() {
-  const forms = document.querySelectorAll('form');
-  let result = null;
-
-  forms.forEach(form => {
-    const pwFields = [...form.querySelectorAll('input[type="password"]')];
-    if (pwFields.length < 2) return;
-
-    let oldField = null, newField = null, confirmField = null;
-    pwFields.forEach(f => {
-      const oldScore = scoreField(f, OLD_PASS_SIGNALS);
-      const newScore = scoreField(f, NEW_PASS_SIGNALS);
-      if (oldScore > 0 && !oldField) oldField = f;
-      else if (newScore > 0 && !newField) newField = f;
-      else if (newScore > 0 && !confirmField) confirmField = f;
-    });
-
-    // fallback by position
-    if (!oldField && pwFields.length >= 2) {
-      [oldField, newField, confirmField] = pwFields;
-    }
-
-    result = { oldField, newField, confirmField, form };
-  });
-
-  return result;
 }
 
 function fillField(el, value) {
@@ -132,21 +102,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     sendResponse({ success: true });
   }
 
-  if (msg.action === 'FILL_CHANGE_PASSWORD') {
-    const form = findChangePasswordForm();
-    if (!form) { sendResponse({ success: false, error: 'No change password form found' }); return; }
-    fillField(form.oldField, msg.oldPassword);
-    fillField(form.newField, msg.newPassword);
-    fillField(form.confirmField, msg.newPassword);
-    sendResponse({ success: true });
-  }
-
   if (msg.action === 'DETECT_FORMS') {
     const login = findLoginForm();
-    const change = findChangePasswordForm();
     sendResponse({
       hasLoginForm: !!login,
-      hasChangeForm: !!change,
       url: window.location.href
     });
   }

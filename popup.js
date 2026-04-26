@@ -494,7 +494,6 @@ async function startMassChange() {
   const checked = [...document.querySelectorAll('.mass-check:checked')];
   if (checked.length === 0) { showToast('Select at least one credential.', 'error'); return; }
 
-  const changeUrl = document.getElementById('mass-change-url').value.trim();
   const strategy = document.querySelector('input[name="pw-strategy"]:checked').value;
   const sameNewPw = document.getElementById('mass-new-password').value;
   const pwLength = Math.max(8, Math.min(64, parseInt(document.getElementById('mass-pw-length').value) || 16));
@@ -521,58 +520,8 @@ async function startMassChange() {
     item.textContent = `⏳ ${cred.name || extractDomain((cred.urls || [])[0] || '')} (${cred.username})`;
     progressArea.appendChild(item);
 
-    if (changeUrl) {
-      try {
-        await new Promise((resolve, reject) => {
-          // 30-second timeout per tab so the loop cannot hang indefinitely
-          const timeout = setTimeout(() => {
-            chrome.tabs.onUpdated.removeListener(listener);
-            reject(new Error('Page load timed out after 30 seconds'));
-          }, 30000);
-
-          chrome.tabs.create({ url: changeUrl }, tab => {
-            if (chrome.runtime.lastError) {
-              clearTimeout(timeout);
-              reject(new Error(chrome.runtime.lastError.message));
-              return;
-            }
-            const listener = (tabId, info) => {
-              if (tabId !== tab.id || info.status !== 'complete') return;
-              chrome.tabs.onUpdated.removeListener(listener);
-              clearTimeout(timeout);
-              setTimeout(async () => {
-                try {
-                  const res = await chrome.runtime.sendMessage({
-                    action: 'FILL_CHANGE_PASSWORD_TAB',
-                    tabId: tab.id,
-                    oldPassword: cred.password,
-                    newPassword: newPw
-                  });
-                  if (res?.success) {
-                    item.className = 'progress-item success';
-                    item.textContent = `✓ ${cred.name || extractDomain((cred.urls || [])[0] || '')} (${cred.username}) — filled, awaiting submit`;
-                  } else {
-                    item.className = 'progress-item error';
-                    item.textContent = `✗ ${cred.name || extractDomain((cred.urls || [])[0] || '')}: ${res?.error || 'Could not fill form'}`;
-                  }
-                } catch (e) {
-                  item.className = 'progress-item error';
-                  item.textContent = `✗ ${cred.name || extractDomain((cred.urls || [])[0] || '')}: ${e.message}`;
-                }
-                resolve();
-              }, 800);
-            };
-            chrome.tabs.onUpdated.addListener(listener);
-          });
-        });
-      } catch (e) {
-        item.className = 'progress-item error';
-        item.textContent = `✗ ${cred.name || extractDomain((cred.urls || [])[0] || '')}: ${e.message}`;
-      }
-    } else {
-      item.className = 'progress-item success';
-      item.textContent = `✓ ${cred.name || extractDomain((cred.urls || [])[0] || '')} (${cred.username}) — vault updated`;
-    }
+    item.className = 'progress-item success';
+    item.textContent = `✓ ${cred.name || extractDomain((cred.urls || [])[0] || '')} (${cred.username}) — vault updated`;
 
     // Update stored password
     const idx = credentials.findIndex(c => c.id === id);

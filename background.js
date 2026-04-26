@@ -49,15 +49,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  if (msg.action === 'FILL_CHANGE_PASSWORD_TAB') {
-    chrome.tabs.sendMessage(msg.tabId, {
-      action: 'FILL_CHANGE_PASSWORD',
-      oldPassword: msg.oldPassword,
-      newPassword: msg.newPassword
-    }, res => sendResponse(res || { success: false }));
-    return true;
-  }
-
   if (msg.action === 'OPEN_AND_FILL') {
     chrome.tabs.create({ url: msg.url }, tab => {
       const tabId = tab.id;
